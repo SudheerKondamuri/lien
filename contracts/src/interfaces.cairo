@@ -1,6 +1,19 @@
 use starknet::ContractAddress;
 use crate::types::{Position, MarketConfig, LienOperation, OpenNoteDeposit};
 
+/// Standard ERC-20 interface on Starknet.
+#[starknet::interface]
+pub trait IERC20<TContractState> {
+    fn total_supply(self: @TContractState) -> u256;
+    fn balance_of(self: @TContractState, account: ContractAddress) -> u256;
+    fn allowance(self: @TContractState, owner: ContractAddress, spender: ContractAddress) -> u256;
+    fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256) -> bool;
+    fn transfer_from(
+        ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256,
+    ) -> bool;
+    fn approve(ref self: TContractState, spender: ContractAddress, amount: u256) -> bool;
+}
+
 /// Lien privacy_compute interface.
 /// Called by the STRK20 Virtual OS during proof generation (not on-chain).
 /// Derives the pseudonymous position identifier from the user's identity_key.
@@ -54,10 +67,10 @@ pub trait ILienAdmin<TContractState> {
     /// WARNING: Non-production oracle. Documented as a hackathon limitation.
     fn set_price(ref self: TContractState, price: u256);
 
-    /// Seeds USDC liquidity into the protocol for borrowing.
+    /// Seeds USDC liquidity into the protocol for borrowing (transfers USDC from caller).
     fn seed_liquidity(ref self: TContractState, amount: u128);
 
-    /// Withdraws excess USDC liquidity (admin only).
+    /// Withdraws excess USDC liquidity (admin only, transfers USDC to admin).
     fn withdraw_liquidity(ref self: TContractState, amount: u128);
 }
 
