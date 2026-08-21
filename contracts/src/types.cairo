@@ -1,7 +1,16 @@
 use starknet::ContractAddress;
 
+/// Lifecycle status for a lending position.
+#[derive(Copy, Drop, Serde, starknet::Store, PartialEq, Debug, Default)]
+pub enum PositionStatus {
+    #[default]
+    Inactive,
+    Active,
+    Closed,
+}
+
 /// Position state stored on-chain keyed by position_id.
-#[derive(Copy, Drop, Serde, starknet::Store, PartialEq, Debug)]
+#[derive(Copy, Drop, Serde, starknet::Store, PartialEq, Debug, Default)]
 pub struct Position {
     /// Collateral token amount in token's base units (e.g. 10^18 for STRK).
     pub collateral: u128,
@@ -9,6 +18,8 @@ pub struct Position {
     pub debt: u128,
     /// Block timestamp (in seconds) of the last state update / interest accrual.
     pub last_updated: u64,
+    /// Lifecycle status of the position.
+    pub status: PositionStatus,
 }
 
 /// Market parameters for Lien V1 single market (STRK collateral / USDC debt).
