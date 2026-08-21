@@ -2,7 +2,10 @@ pub mod errors {
     pub const UNAUTHORIZED_CALLER: felt252 = 'UNAUTHORIZED_CALLER';
     pub const ZERO_AMOUNT: felt252 = 'ZERO_AMOUNT';
     pub const ZERO_PRICE: felt252 = 'ZERO_PRICE';
+    pub const ZERO_ADDRESS: felt252 = 'ZERO_ADDRESS';
+    pub const IDENTICAL_TOKENS: felt252 = 'IDENTICAL_TOKENS';
     pub const POSITION_NOT_FOUND: felt252 = 'POSITION_NOT_FOUND';
+    pub const POSITION_CLOSED: felt252 = 'POSITION_CLOSED';
     pub const EXCEEDS_MAX_LTV: felt252 = 'EXCEEDS_MAX_LTV';
     pub const INSUFFICIENT_LIQUIDITY: felt252 = 'INSUFFICIENT_LIQUIDITY';
     pub const INSUFFICIENT_COLLATERAL: felt252 = 'INSUFFICIENT_COLLATERAL';
@@ -12,4 +15,7 @@ pub mod errors {
     pub const INVALID_MARKET_CONFIG: felt252 = 'INVALID_MARKET_CONFIG';
     pub const ZERO_DEBT: felt252 = 'ZERO_DEBT';
     pub const ARITHMETIC_OVERFLOW: felt252 = 'ARITHMETIC_OVERFLOW';
+    pub const TRANSFER_FAILED: felt252 = 'TRANSFER_FAILED';
+    pub const TRANSFER_FROM_FAILED: felt252 = 'TRANSFER_FROM_FAILED';
+    pub const APPROVE_FAILED: felt252 = 'APPROVE_FAILED';
 }
