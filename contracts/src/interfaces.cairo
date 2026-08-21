@@ -1,63 +1,75 @@
 use starknet::ContractAddress;
-use lien_contracts::types::{Position, LoanTerms};
+use crate::types::{Position, MarketConfig, LienOperation, OpenNoteDeposit};
 
+/// Lien privacy_compute interface.
+/// Called by the STRK20 Virtual OS during proof generation (not on-chain).
+/// Derives the pseudonymous position identifier from the user's identity_key.
 #[starknet::interface]
-pub trait ISTRK20Pool<TContractState> {
-    // Shield tokens into the pool on behalf of a shielded recipient
-    fn shield_deposit(ref self: TContractState, amount: u256, shielded_recipient: felt252);
-
-    // Private transfer within the shielded pool
-    fn shielded_transfer(
-        ref self: TContractState,
-        proof: Span<felt252>,
-        root: felt252,
-        nullifier: felt252,
-        output_commitments: Span<felt252>,
-    );
-
-    // Transfer shielded tokens from pool reserve to shielded recipient
-    fn transfer_shielded_from(
-        ref self: TContractState,
-        from_shielded: felt252,
-        to_shielded: felt252,
-        amount: u256,
-    );
-
-    // Unshield tokens to a public Starknet recipient address
-    fn unshield_withdraw(
-        ref self: TContractState,
-        amount: u256,
-        recipient: ContractAddress,
-        proof: Span<felt252>,
-        nullifier: felt252,
-    );
-
-    // Retrieve pool token asset address
-    fn get_underlying_asset(self: @TContractState) -> ContractAddress;
+pub trait ILienCompute<TContractState> {
+    /// Computes the deterministic position identifier for a given identity.
+    ///
+    /// Called by STRK20 during ComputeAndInvoke client action processing.
+    /// identity_key: injected by the STRK20 Virtual OS from:
+    ///   h('IDENTITY_KEY_TAG:V1', user_addr, user_private_key, LienHelper_address)
+    /// position_nonce: user-selected index (0, 1, 2...) for multiple positions.
+    ///
+    /// Returns: position_id = Poseidon('LIEN_POSITION:V1', identity_key, position_nonce)
+    fn privacy_compute(
+        self: @TContractState,
+        identity_key: felt252,
+        position_nonce: felt252,
+    ) -> felt252;
 }
 
+/// Lien privacy_invoke_with_computation interface.
+/// Called on-chain by the STRK20 Privacy Pool during ServerAction::InvokeWithComputation.
 #[starknet::interface]
-pub trait ILendingPool<TContractState> {
-    // Deposit collateral into position via STRK20 shielded pool
-    fn deposit_collateral(ref self: TContractState, position_id: felt252, amount: u256);
-
-    // Borrow debt assets against shielded collateral
-    fn borrow(ref self: TContractState, position_id: felt252, amount: u256);
-
-    // Repay borrowed debt assets via STRK20 shielded pool
-    fn repay(ref self: TContractState, position_id: felt252, amount: u256);
-
-    // Liquidate undercollateralized position
-    fn liquidate(
+pub trait ILienHelper<TContractState> {
+    /// Executes a position state transition.
+    ///
+    /// ONLY callable by the configured STRK20 Privacy Pool contract.
+    /// The position_id is the verified output of privacy_compute, injected
+    /// by the pool as the first element of calldata (from the compute result).
+    ///
+    /// Returns Span<OpenNoteDeposit> for operations that produce output tokens
+    /// (Borrow, WithdrawCollateral). Returns empty span for input-only operations
+    /// (DepositCollateral, Repay).
+    fn privacy_invoke_with_computation(
         ref self: TContractState,
         position_id: felt252,
-        debt_to_cover: u256,
-        liquidator_shielded_recipient: felt252,
-    );
+        operation: LienOperation,
+        amount: u128,
+        note_id: felt252,
+    ) -> (Span<OpenNoteDeposit>, Span<ContractAddress>);
 
-    // Read position details by shielded position identifier
+    /// Public, permissionless liquidation entrypoint.
+    /// NOT routed through the privacy pool — anyone can liquidate undercollateralized positions.
+    fn liquidate(ref self: TContractState, position_id: felt252);
+}
+
+/// Admin interface for protocol configuration.
+#[starknet::interface]
+pub trait ILienAdmin<TContractState> {
+    /// Sets the oracle price. Manual feed for hackathon V1.
+    /// WARNING: Non-production oracle. Documented as a hackathon limitation.
+    fn set_price(ref self: TContractState, price: u256);
+
+    /// Seeds USDC liquidity into the protocol for borrowing.
+    fn seed_liquidity(ref self: TContractState, amount: u128);
+
+    /// Withdraws excess USDC liquidity (admin only).
+    fn withdraw_liquidity(ref self: TContractState, amount: u128);
+}
+
+/// Read-only views for protocol state inspection.
+#[starknet::interface]
+pub trait ILienViews<TContractState> {
     fn get_position(self: @TContractState, position_id: felt252) -> Position;
-
-    // Read active loan terms
-    fn get_loan_terms(self: @TContractState) -> LoanTerms;
+    fn get_market_config(self: @TContractState) -> MarketConfig;
+    fn get_price(self: @TContractState) -> u256;
+    fn get_total_collateral(self: @TContractState) -> u128;
+    fn get_total_debt(self: @TContractState) -> u128;
+    fn get_available_liquidity(self: @TContractState) -> u128;
+    fn get_bad_debt(self: @TContractState) -> u128;
+    fn get_privacy_pool(self: @TContractState) -> ContractAddress;
 }
